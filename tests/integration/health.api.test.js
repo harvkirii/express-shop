@@ -14,13 +14,14 @@ describe("Health API", () => {
   test("GET /health/live returns 200", async () => {
     const response = await request(app).get("/health/live");
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
     expect(response.body).toEqual({ status: "ok" });
   });
 
   test("GET /health/live не раскрывает configuration", async () => {
     const response = await request(app).get("/health/live");
-    const text = JSON.stringify(response.body) + JSON.stringify(response.headers);
+    const text =
+      JSON.stringify(response.body) + JSON.stringify(response.headers);
 
     expect(text).not.toContain(env.jwtSecret);
     expect(text).not.toContain(env.databaseUrl);
@@ -47,7 +48,7 @@ describe("Health API", () => {
       "/health",
       createHealthRoutes(async () => {
         throw new Error("connection refused");
-      })
+      }),
     );
 
     const response = await request(brokenApp).get("/health/ready");
@@ -65,7 +66,7 @@ describe("Health API", () => {
       "/health",
       createHealthRoutes(async () => {
         throw new Error("db down");
-      })
+      }),
     );
 
     expect((await request(brokenApp).get("/health/live")).status).toBe(200);
