@@ -14,7 +14,7 @@ describe("Health API", () => {
   test("GET /health/live returns 200", async () => {
     const response = await request(app).get("/health/live");
 
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(200);
     expect(response.body).toEqual({ status: "ok" });
   });
 
