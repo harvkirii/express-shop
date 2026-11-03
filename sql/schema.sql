@@ -1,10 +1,3 @@
--- ============================================================
--- express-shop: таблицы для pgAdmin
--- Запуск: pgAdmin -> база todo_db -> ПКМ -> Query Tool -> вставить -> F5.
--- Скрипт идемпотентный: повторный запуск ничего не ломает и данные не удаляет.
--- Существующая таблица todos не затрагивается.
--- ============================================================
-
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -49,8 +42,6 @@ CREATE TABLE IF NOT EXISTS order_items (
   PRIMARY KEY (order_id, product_id)
 );
 
--- Если таблица users уже была создана раньше (без полей для JWT-авторизации) — добавим их.
--- Для непустой таблицы подставляется заглушка, войти под такими пользователями нельзя (нужна новая регистрация).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(100) NOT NULL DEFAULT '!';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'customer';
 ALTER TABLE users ALTER COLUMN password_hash DROP DEFAULT;
@@ -80,5 +71,3 @@ COMMIT;
 
 -- Проверка:
 -- SELECT * FROM products;
--- Чтобы сделать пользователя администратором (нужен для POST/PATCH/DELETE /api/products):
--- UPDATE users SET role = 'admin' WHERE email = 'you@example.com';

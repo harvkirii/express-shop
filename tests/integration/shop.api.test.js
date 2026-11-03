@@ -7,11 +7,11 @@ const email = `test-${Date.now()}@example.com`;
 let token;
 
 beforeAll(async () => {
-  await prisma.users.deleteMany({ where: { email } });
+  await prisma.user.deleteMany({ where: { email } });
 });
 
 afterAll(async () => {
-  await prisma.users.deleteMany({ where: { email } });
+  await prisma.user.deleteMany({ where: { email } });
   await prisma.$disconnect();
 });
 

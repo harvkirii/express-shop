@@ -1,62 +1,94 @@
 import { prisma } from "../config/prisma.js";
+import { AppError } from "../utils/AppError.js";
 
-function toDto(p) {
-  return {
-    id: p.id,
-    name: p.name,
-    price: p.price,
-    categoryId: p.category_id,
-    category: p.categories?.name,
-    inStock: p.in_stock
-  };
+// P2003 — нарушение внешнего ключа (несуществующая категория / товар уже есть в заказах)
+function isForeignKeyError(error) {
+  return error?.code === "P2003";
 }
 
-const include = { categories: true };
-
-export async function listProducts() {
-  const rows = await prisma.products.findMany({ include, orderBy: { id: "asc" } });
-  return rows.map(toDto);
-}
-
-export async function getProduct(id) {
-  const row = await prisma.products.findUnique({ where: { id }, include });
-  return row ? toDto(row) : null;
-}
-
-export async function createProduct(data) {
-  const row = await prisma.products.create({
-    data: {
-      name: data.name,
-      price: data.price,
-      category_id: data.categoryId,
-      in_stock: data.inStock ?? true
+// Список: select — клиенту отдаём только нужные поля,
+// а у вложенной Category только id и name.
+export async function getAllProducts() {
+  return prisma.product.findMany({
+    select: {
+      id: true,
+      name: true,
+      price: true,
+      inStock: true,
+      category: {
+        select: {
+          id: true,
+          name: true
+        }
+      }
     },
-    include
+    orderBy: {
+      id: "asc"
+    }
   });
-  return toDto(row);
 }
 
-export async function updateProduct(id, data) {
-  const exists = await prisma.products.findUnique({ where: { id } });
-  if (!exists) return null;
-
-  const row = await prisma.products.update({
+// Один товар: include — все поля Product + связанная Category целиком.
+export async function findProductById(id) {
+  return prisma.product.findUnique({
     where: { id },
-    data: {
-      name: data.name,
-      price: data.price,
-      category_id: data.categoryId,
-      in_stock: data.inStock
-    },
-    include
+    include: {
+      category: true
+    }
   });
-  return toDto(row);
 }
 
-export async function deleteProduct(id) {
-  const exists = await prisma.products.findUnique({ where: { id } });
+export async function addProduct(data) {
+  try {
+    return await prisma.product.create({
+      data: {
+        name: data.name,
+        price: data.price,
+        categoryId: data.categoryId,
+        inStock: data.inStock
+      },
+      include: { category: true }
+    });
+  } catch (error) {
+    if (isForeignKeyError(error)) throw new AppError("Category not found", 400);
+    throw error;
+  }
+}
+
+export async function updateProductById(id, changes) {
+  const exists = await prisma.product.findUnique({ where: { id } });
   if (!exists) return null;
 
-  const row = await prisma.products.delete({ where: { id }, include });
-  return toDto(row);
+  try {
+    return await prisma.product.update({
+      where: { id },
+      data: {
+        name: changes.name,
+        price: changes.price,
+        categoryId: changes.categoryId,
+        inStock: changes.inStock
+      },
+      include: { category: true }
+    });
+  } catch (error) {
+    if (isForeignKeyError(error)) throw new AppError("Category not found", 400);
+    throw error;
+  }
+}
+
+export async function deleteProductById(id) {
+  const exists = await prisma.product.findUnique({ where: { id } });
+  if (!exists) return null;
+
+  try {
+    return await prisma.product.delete({
+      where: { id },
+      include: { category: true }
+    });
+  } catch (error) {
+    if (isForeignKeyError(error)) {
+      throw new AppError("Product is used in orders and cannot be deleted", 409);
+    }
+    throw error;
+  }
 }
