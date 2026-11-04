@@ -13,6 +13,7 @@ datasource db {
 model Category {
   id       Int       @id @default(autoincrement())
   name     String    @unique @db.VarChar(100)
+  slug     String?   @unique
   products Product[]
 
   @@map("categories")
@@ -21,8 +22,9 @@ model Category {
 model Product {
   id         Int         @id @default(autoincrement())
   name       String      @db.VarChar(150)
-  price      Int
-  categoryId Int         @map("category_id")
+  price       Int
+  description String?
+  categoryId  Int         @map("category_id")
   inStock    Boolean     @default(true) @map("in_stock")
   category   Category    @relation(fields: [categoryId], references: [id])
   orderItems OrderItem[]

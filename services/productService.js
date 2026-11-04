@@ -15,6 +15,7 @@ export async function getAllProducts() {
       name: true,
       price: true,
       inStock: true,
+      description: true,
       category: {
         select: {
           id: true,
@@ -44,6 +45,7 @@ export async function addProduct(data) {
       data: {
         name: data.name,
         price: data.price,
+        description: data.description ?? null,
         categoryId: data.categoryId,
         inStock: data.inStock
       },
@@ -65,6 +67,7 @@ export async function updateProductById(id, changes) {
       data: {
         name: changes.name,
         price: changes.price,
+        description: changes.description,
         categoryId: changes.categoryId,
         inStock: changes.inStock
       },

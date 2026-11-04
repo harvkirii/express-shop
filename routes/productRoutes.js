@@ -15,6 +15,7 @@ export const productRoutes = Router();
 const createSchema = z.object({
   name: z.string().trim().min(1).max(150),
   price: z.number().int().nonnegative(),
+  description: z.string().trim().max(2000).optional(),
   categoryId: z.number().int().positive(),
   inStock: z.boolean().optional()
 });

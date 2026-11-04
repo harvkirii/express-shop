@@ -48,6 +48,7 @@ afterAll(async () => {
   await prisma.orderItem.deleteMany({ where: { productId: product.id } });
   await prisma.order.deleteMany({ where: { user: { email: { in: [emailA, emailB] } } } });
   await prisma.user.deleteMany({ where: { email: { in: [emailA, emailB] } } });
+  await prisma.product.deleteMany({ where: { name: { startsWith: "LR8 Product" } } });
   await prisma.product.delete({ where: { id: product.id } });
   await prisma.category.delete({ where: { id: category.id } });
   await prisma.$disconnect();
@@ -60,7 +61,7 @@ describe("Product API: связанная Category", () => {
 
     expect(response.status).toBe(200);
     expect(item.category).toEqual({ id: category.id, name: category.name });
-    expect(Object.keys(item).sort()).toEqual(["category", "id", "inStock", "name", "price"]);
+    expect(Object.keys(item).sort()).toEqual(["category", "description", "id", "inStock", "name", "price"]);
   });
 
   test("GET /api/products/:id возвращает товар с вложенной category", async () => {
@@ -178,5 +179,54 @@ describe("Relation filter some: заказы по товару", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual([]);
+  });
+});
+
+describe("Product.description (лр8)", () => {
+  test("admin создаёт товар с description, поле сохраняется и возвращается", async () => {
+    await prisma.user.update({ where: { email: emailA }, data: { role: "admin" } });
+    const login = await request(app).post("/api/auth/login").send({ email: emailA, password });
+    const headers = { Authorization: `Bearer ${login.body.token}` };
+
+    const created = await request(app)
+      .post("/api/products")
+      .set(headers)
+      .send({
+        name: `LR8 Product ${stamp}`,
+        price: 32000,
+        description: "Механическая клавиатура для учебного магазина",
+        categoryId: category.id,
+        inStock: true
+      });
+
+    expect(created.status).toBe(201);
+    expect(created.body.description).toBe("Механическая клавиатура для учебного магазина");
+
+    const fetched = await request(app).get(`/api/products/${created.body.id}`);
+    expect(fetched.body.description).toBe("Механическая клавиатура для учебного магазина");
+  });
+
+  test("description необязателен: без него приходит null", async () => {
+    const login = await request(app).post("/api/auth/login").send({ email: emailA, password });
+
+    const created = await request(app)
+      .post("/api/products")
+      .set("Authorization", `Bearer ${login.body.token}`)
+      .send({ name: `LR8 Product no-desc ${stamp}`, price: 1, categoryId: category.id });
+
+    expect(created.status).toBe(201);
+    expect(created.body.description).toBeNull();
+  });
+
+  test("несуществующая категория — 400", async () => {
+    const login = await request(app).post("/api/auth/login").send({ email: emailA, password });
+
+    const response = await request(app)
+      .post("/api/products")
+      .set("Authorization", `Bearer ${login.body.token}`)
+      .send({ name: `LR8 Product bad ${stamp}`, price: 1, categoryId: 999999 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("Category not found");
   });
 });
